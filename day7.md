@@ -50,7 +50,8 @@ Now, I will find all the program names and their weight.
    input %>% 
      str_match('([a-z]+) \\((\\d+)\\)') %>% 
      as_tibble() %>% 
-     select("name" = V2, "weight" = V3)
+     select("name" = V2, "weight" = V3) %>% 
+     mutate(weight = as.numeric(weight))
 }
 prog_names <- get_name_weight(example_input)
 prog_names
@@ -58,7 +59,7 @@ prog_names
 
     ## # A tibble: 13 x 2
     ##     name weight
-    ##    <chr>  <chr>
+    ##    <chr>  <dbl>
     ##  1  pbga     66
     ##  2  xhth     57
     ##  3  ebii     61
@@ -126,25 +127,144 @@ get_bottom(my_input)
 Part 2
 ------
 
-Now we have to find which tower is not balanced. The weights of all the towers above one disk must be equal. We already have the weight of each individual program, in our example in `prog_names`.
+Now we have to find which tower is not balanced. The weights of all the towers above one disk must be equal. I want to have the children (if any), and I split it to have a list with the names. `children_list` is a list and it is a little akward to work with afterwards, but I couldn't do better...
 
 ``` r
-prog_names
+get_name_weight_children <- function(input){
+   input %>% 
+     str_match('([a-z]+) \\((\\d+)\\)(?: -> )?(.*)?') %>% 
+     as_tibble() %>% 
+     select("name" = V2, "weight" = V3, "children" = V4) %>% 
+     mutate(weight = as.numeric(weight)) %>% 
+     mutate(children_list = str_split(children, ', '))
+ }
+
+prog_weight <- get_name_weight_children(example_input)
+prog_weight
 ```
 
-    ## # A tibble: 13 x 2
-    ##     name weight
-    ##    <chr>  <chr>
-    ##  1  pbga     66
-    ##  2  xhth     57
-    ##  3  ebii     61
-    ##  4  havc     66
-    ##  5  ktlj     57
-    ##  6  fwft     72
-    ##  7  qoyq     66
-    ##  8  padx     45
-    ##  9  tknk     41
-    ## 10  jptl     61
-    ## 11  ugml     68
-    ## 12  gyxo     61
-    ## 13  cntj     57
+    ## # A tibble: 13 x 4
+    ##     name weight         children children_list
+    ##    <chr>  <dbl>            <chr>        <list>
+    ##  1  pbga     66                      <chr [1]>
+    ##  2  xhth     57                      <chr [1]>
+    ##  3  ebii     61                      <chr [1]>
+    ##  4  havc     66                      <chr [1]>
+    ##  5  ktlj     57                      <chr [1]>
+    ##  6  fwft     72 ktlj, cntj, xhth     <chr [3]>
+    ##  7  qoyq     66                      <chr [1]>
+    ##  8  padx     45 pbga, havc, qoyq     <chr [3]>
+    ##  9  tknk     41 ugml, padx, fwft     <chr [3]>
+    ## 10  jptl     61                      <chr [1]>
+    ## 11  ugml     68 gyxo, ebii, jptl     <chr [3]>
+    ## 12  gyxo     61                      <chr [1]>
+    ## 13  cntj     57                      <chr [1]>
+
+I then want to have the total weight for a given program name. `get_total_weight` is a recursive function that gives either the weight if the program do not have children, or the sum of his own weight and the weight of all the children.
+
+``` r
+get_total_weight <- function(name){
+  i <- which(prog_weight$name == name) # Thanks to jennybc for the trick to index the list using an index
+  weight = prog_weight$weight[i]
+  if(prog_weight$children[i] == ""){
+    return(weight)
+  }
+  else {
+    return(weight + sum(map_dbl(prog_weight$children_list[[i]], 
+                                get_total_weight)))
+  }
+}
+
+expect_equal(get_total_weight('xhth'), 57)
+expect_equal(get_total_weight('fwft'), 243)
+expect_equal(get_total_weight('ugml'), 251)
+```
+
+It works on the example, nice! Next, I want to check wether the program is balanced, i.e. if all the children have the same total weight. If the program doesn't have any children, then it is `TRUE`, if not, I compute the weights of all the children in the list, and check if the min and the max are the same (I compute `diff(range()) == 0` which is equivalent).
+
+``` r
+balanced_above <- function(name) {
+  i <- which(prog_weight$name == name)
+  if(prog_weight$children[i] == ""){
+    return(TRUE)
+  }
+  else {
+    above_weights = map_dbl(prog_weight$children_list[[i]],
+                            get_total_weight)
+    return(diff(range(above_weights)) == 0)
+  }
+}
+
+expect_true(balanced_above('xhth'))
+expect_true(balanced_above('fwft'))
+expect_false(balanced_above('tknk'))
+```
+
+To find which program is unbalanced, we have to move up from the root.
+
+``` r
+root <- get_bottom(example_input)
+
+find_topmost_unbalanced <- function(root){
+    children_names <- prog_weight %>% 
+      filter(name == root) %>%
+      `$`(children_list) %>%
+      pluck(1)
+    
+    child_balance <- map_lgl(children_names, balanced_above)
+    
+    if(all(child_balance)){
+      return(root)
+    }
+    else {
+      return(find_topmost_unbalanced(children_names[! child_balance]))
+    }
+}
+
+expect_equal(find_topmost_unbalanced(root), "tknk")
+```
+
+``` r
+weights_above <- function(name) {
+  i <-  which(prog_weight$name == name)
+  weights <- map_dbl(prog_weight$children_list[[i]], get_total_weight)
+  tibble(name = prog_weight$children_list[[i]], 
+         total_weight = weights) %>% 
+    inner_join(prog_weight %>% select(name, weight), by = "name")
+}
+weights_above('tknk')
+```
+
+    ## # A tibble: 3 x 3
+    ##    name total_weight weight
+    ##   <chr>        <dbl>  <dbl>
+    ## 1  ugml          251     68
+    ## 2  padx          243     45
+    ## 3  fwft          243     72
+
+``` r
+weights_above(find_topmost_unbalanced(root)) %>% 
+  mutate(diff = total_weight - median(total_weight),
+         balance = weight - diff) %>% 
+  filter(total_weight != median(total_weight))
+```
+
+    ## # A tibble: 1 x 5
+    ##    name total_weight weight  diff balance
+    ##   <chr>        <dbl>  <dbl> <dbl>   <dbl>
+    ## 1  ugml          251     68     8      60
+
+``` r
+prog_weight <- get_name_weight_children(my_input)
+root <- get_bottom(my_input)
+
+weights_above(find_topmost_unbalanced(root)) %>% 
+  mutate(diff = total_weight - median(total_weight),
+         balance = weight - diff) %>% 
+  filter(total_weight != median(total_weight))
+```
+
+    ## # A tibble: 1 x 5
+    ##    name total_weight weight  diff balance
+    ##   <chr>        <dbl>  <dbl> <dbl>   <dbl>
+    ## 1 ncrxh         2579   1679     5    1674
