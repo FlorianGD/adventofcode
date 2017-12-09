@@ -55,11 +55,11 @@ Ok now, let's find the programs that are in towers, i.e. the programs whose name
 ```{r}
 get_towers <- function(input){
   input %>% 
-    `[`(str_detect(., '->')) %>%  # Get only the lines where there is a '->'
-    str_split('-> ') %>%          # Split the line
-    map(2) %>%                    # Get the values after the '-> '
-    str_split(', ') %>%           # Split the lines after commas
-    flatten_chr()                 # Flatten the result
+    str_subset('->') %>%    # Get only the lines where there is a '->'
+    str_split('-> ') %>%    # Split the line
+    map(2) %>%              # Get the values after the '-> '
+    str_split(', ') %>%     # Split the lines after commas
+    flatten_chr()           # Flatten the result
 }
 prog_in_towers <- get_towers(example_input)
 prog_in_towers
