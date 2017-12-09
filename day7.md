@@ -200,7 +200,7 @@ expect_true(balanced_above('fwft'))
 expect_false(balanced_above('tknk'))
 ```
 
-To find which program is unbalanced, we have to move up from the root.
+To find which program is unbalanced, we have to move up from the root. If all the children are balanced, we're done, if not, we find the one that is different and check again.
 
 ``` r
 root <- get_bottom(example_input)
@@ -224,6 +224,8 @@ find_topmost_unbalanced <- function(root){
 expect_equal(find_topmost_unbalanced(root), "tknk")
 ```
 
+The next function gives a tibble with the weights of the children above, both total and individual.
+
 ``` r
 weights_above <- function(name) {
   i <-  which(prog_weight$name == name)
@@ -242,17 +244,21 @@ weights_above('tknk')
     ## 2  padx          243     45
     ## 3  fwft          243     72
 
+Given those weights for the topmost unbalanced program, we compute the difference between the total weights and the median weight. This gives by how much the program is unbalanced. The difference between the individual weight and this offset gives the weight the program should have in order to balance everything. For the example, we get `60`, which is the expected result.
+
 ``` r
 weights_above(find_topmost_unbalanced(root)) %>% 
   mutate(diff = total_weight - median(total_weight),
          balance = weight - diff) %>% 
-  filter(total_weight != median(total_weight))
+  filter(diff != 0)
 ```
 
     ## # A tibble: 1 x 5
     ##    name total_weight weight  diff balance
     ##   <chr>        <dbl>  <dbl> <dbl>   <dbl>
     ## 1  ugml          251     68     8      60
+
+To compute if for the real input, I have the compute `prog_weight`, find the root and apply the same pipe as above.
 
 ``` r
 prog_weight <- get_name_weight_children(my_input)
@@ -268,3 +274,5 @@ weights_above(find_topmost_unbalanced(root)) %>%
     ##    name total_weight weight  diff balance
     ##   <chr>        <dbl>  <dbl> <dbl>   <dbl>
     ## 1 ncrxh         2579   1679     5    1674
+
+The answer is `1674`, which is correct!
