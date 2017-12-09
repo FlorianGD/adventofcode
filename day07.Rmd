@@ -86,7 +86,7 @@ expect_equal(get_bottom(example_input), "tknk")
 
 Now with the file
 ```{r}
-my_input <- read_lines("day7-input.txt")
+my_input <- read_lines("day07-input.txt")
 
 get_bottom(my_input)
 ```
