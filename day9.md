@@ -209,3 +209,65 @@ score(detect_group_garbage(my_input))
     ## [1] 11898
 
 YES!
+
+Part 2
+------
+
+Now we have to count the non canceled character (and without the `!` canceling it) inside of the garbage.
+
+I will modifiy the `detect_group_garbage` function to make this count.
+
+``` r
+count_garbage <- function(string){
+  count = 0
+  i = 1
+  garbage_flag = FALSE
+  while (i <= nchar(string)) {
+    letter <- str_sub(string, i, i)
+
+    # If there is a !, ignore the next character
+    if(letter == "!" & garbage_flag){
+      i = i + 2
+    }
+    # If there is garbage, set the garbage flage to TRUE
+    else if(letter == "<" & ! garbage_flag){
+      garbage_flag = TRUE
+      i = i + 1
+    }
+    else if(letter == ">" & garbage_flag){
+      garbage_flag = FALSE
+      i = i + 1
+    }
+    else if (garbage_flag) {
+      count = count + 1
+      i = i + 1
+    }
+    else{
+      i = i + 1
+    }
+  }
+  count
+}
+```
+
+Let's do some test
+
+``` r
+expect_equal(count_garbage('<>'), 0)
+expect_equal(count_garbage('<random characters>'), 17)
+expect_equal(count_garbage('<<<<>'), 3)
+expect_equal(count_garbage('<{!>}>'), 2)
+expect_equal(count_garbage('<!!>'), 0)
+expect_equal(count_garbage('<!!!>>'), 0)
+expect_equal(count_garbage('<{o"i!a,<{i<a>'), 10)
+```
+
+Seems good!
+
+``` r
+count_garbage(my_input)
+```
+
+    ## [1] 5601
+
+That's the good answer!
