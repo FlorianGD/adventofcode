@@ -1,6 +1,9 @@
 Day 10
 ================
 
+Part 1
+------
+
 We have a list, and given an inout we must reverse some sublists. The list is circular, meaning that if we reach the end, we must go back to the beginning. Here are the rules:
 
 > To achieve this, begin with a list of numbers from 0 to 255, a current position which begins at 0 (the first element in the list), a skip size (which starts at 0), and a sequence of lengths (your puzzle input). Then, for each length:
@@ -99,3 +102,83 @@ result(my_list, lengths)
 ```
 
     ## [1] 1980
+
+Part 2
+------
+
+It gets (over)complicated. We now have to treat the input as a string of bytes that has to be converted to numbers. And the we have to add this arbitrary list: `17, 31, 73, 47, 23`
+
+``` r
+conv_input <- function(input) {
+  c(as.integer(charToRaw(input)), c(17, 31, 73, 47, 23))
+}
+conv_input("1,2,3")
+```
+
+    ##  [1] 49 44 50 44 51 17 31 73 47 23
+
+We now have to do 64 rounds, in place of just one as above, but we must preserve the `position` and `skip length` from one round to the other. Let's modify the `hash` function to return also those values.
+
+``` r
+hash_list_2 <- function(my_list, lengths, pos = 0, skip_size = 0) {
+  list_size <- length(my_list)
+  
+  for (i in lengths) {
+    ind <- indices(pos, i, list_size)
+    my_list <- rev_indices(my_list, ind)
+    pos <- next_pos(pos, i, skip_size, list_size)
+    skip_size <- skip_size + 1    
+  }
+  return(list(result = my_list, 
+              position = pos, 
+              skip = skip_size))
+}
+hash_list_2(ex_list, ex_lengths)
+```
+
+    ## $result
+    ## [1] 3 4 2 1 0
+    ## 
+    ## $position
+    ## [1] 4
+    ## 
+    ## $skip
+    ## [1] 4
+
+``` r
+run_hashes <- function(input){
+  my_list <- 0:255
+  pos <- 0
+  skip_size <- 0
+  
+  lengths <- conv_input(input)
+  for (i in seq(64)) {
+    res <- hash_list_2(my_list, lengths, pos, skip_size)
+    my_list <- res[[1]]
+    pos <- res[[2]]
+    skip_size <- res[[3]]
+  }
+  my_list
+}
+```
+
+``` r
+dense_hash <- function(input){
+  hash <- run_hashes(input)
+  matrix(hash, ncol = 16) %>% 
+    as_tibble() %>% 
+    summarise_all(~as.character(as.hexmode(reduce(.x, bitwXor)), width = 2)) %>% 
+    paste0(collapse = "")
+}
+
+expect_equal(dense_hash(""), "a2582a3a0e66e6e86e3812dcb672a272")
+expect_equal(dense_hash("AoC 2017"),"33efeb34ea91902bb2f59c9920caa6cd")
+expect_equal(dense_hash("1,2,3"),"3efbe78a8d82f29979031a4aa0b16a9d")
+expect_equal(dense_hash("1,2,4"), "63960835bcdc130f0b66d7ff4f6a5a8e")
+```
+
+``` r
+dense_hash("187,254,0,81,169,219,1,190,19,102,255,56,46,32,2,216")
+```
+
+    ## [1] "899124dac21012ebc32e2f4d11eaec55"
