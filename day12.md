@@ -10,6 +10,7 @@ Programs commnunicate with each other given pipes `<->`, but not directly. Given
 library(tidyverse)
 library(testthat)
 library(stringr)
+library(magrittr)
 ```
 
 The example input is as follow.
@@ -59,18 +60,24 @@ ex_links
 I will make a recursive function to look into the list in links and to follow the programs inside of it, if they are not already in a vector.
 
 ``` r
-rec_lookup <- function(link, programs, control = c()) {
-  if (! (link %in% control)) {
-    control <- c(control, link)
-    
-    next_links <- programs %>% 
-      filter(program == link) %>% 
-      `$`(links) %>% 
-      pluck(1)
-    
-    for (l in next_links) {
-      control <- rec_lookup(l, programs, control)
-    }
+next_links <- function(prev_links, programs) {
+  programs %>% 
+      filter(program %in% prev_links) %>% 
+      use_series(links) %>% 
+      reduce(union)
+}
+
+rec_lookup <- function(links, programs, control = c()) {
+  # Get the next links
+  next_links_vec <- next_links(links, programs)
+  # Check if there are new values
+  new_vec <- setdiff(next_links_vec, control)
+
+  if (!is_empty(new_vec)) {
+    # Add the new values to control
+    control <- c(control, new_vec)
+    # Repeat with the new values
+    control <- rec_lookup(new_vec, programs, control)
   }
   control
 }
@@ -78,7 +85,7 @@ rec_lookup <- function(link, programs, control = c()) {
 rec_lookup(0, ex_links)
 ```
 
-    ## [1] 0 2 3 4 6 5
+    ## [1] 2 0 3 4 6 5
 
 ``` r
 my_input <- read_lines("day12-input.txt")
