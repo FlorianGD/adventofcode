@@ -102,3 +102,27 @@ length(rec_lookup(0, my_programs))
 
 Part 2
 ------
+
+We have to count all the groups that exist, a group being interconnected programs. In the example input, there are 2 groups, one connected to 0, and one consisting only of 1 (connected only to itself). We are going to have the same logic as above: start with the first element (`0`), find all connected programs, exclude them from the list to consider, add 1 to a group counter and repeat with the first element until the list is empty.
+
+``` r
+all_groups <- function(prog_list, programs) {
+  start <- prog_list[1]
+  group_count <- 0
+  while(! is_empty(prog_list)) {
+      connected <- rec_lookup(start, programs)
+      prog_list <- setdiff(prog_list, connected)
+      start <- prog_list[1]
+      group_count <- group_count + 1
+  }
+  group_count
+}
+
+expect_equal(all_groups(0:6, ex_links), 2)
+```
+
+``` r
+all_groups(0:1999, my_programs)
+```
+
+    ## [1] 204
