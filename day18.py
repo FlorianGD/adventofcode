@@ -76,7 +76,7 @@ def process_instr2(registers, prog, instr, reg, val_or_reg):
     elif instr == "mod":
         registers[reg] = registers.get(reg, 0) % eval_reg2(registers, val_or_reg)
     elif instr == "jgz":
-        if registers.get(reg, 0) > 0:
+        if eval_reg2(registers, reg) > 0:
             res = eval_reg2(registers, val_or_reg)
     elif instr == "snd":
         sounds[1 - prog].append(eval_reg2(registers, reg))
@@ -106,6 +106,7 @@ def two_reg(instructions):
         else:
             instr0, reg0, val_or_reg0 = parse_instr(instructions[i0])
             ret0 = process_instr2(registers0, 0, instr0, reg0, val_or_reg0)
+            i0 += ret0
         
         if i1 < 0 or i1 >  max_len:
             i1 = -1
@@ -113,10 +114,9 @@ def two_reg(instructions):
         else:
             instr1, reg1, val_or_reg1 = parse_instr(instructions[i1])
             ret1 = process_instr2(registers1, 1, instr1, reg1, val_or_reg1)
+            i1 += ret1        
         
         if ret0 == 0 and ret1 == 0:
             return send1
-        i0 += ret0
-        i1 += ret1
 
 print("Part2: {}".format(two_reg(my_input)))
