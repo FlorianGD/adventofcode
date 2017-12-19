@@ -71,3 +71,34 @@ def walk_maze(maze):
     return "".join(letters)
 
 print("Part 1: {}".format(walk_maze(maze)))
+
+## Part 2
+
+def walk_maze2(maze):
+    steps = 1
+    letters = []
+    # Find beginning of maze
+    i = maze[0].index('|')
+    # First move is down
+    sign = 1
+    j = up_or_down(maze, i, 0, sign, letters)
+    steps += j
+    while True:
+        sign = next_left_right(maze, i, j)
+        # if next move is a space, we reached the end
+        if maze[j][i + sign] == " ":
+            break
+        i0 = i
+        i = left_or_right(maze, i, j, sign, letters)
+        steps += abs(i - i0)
+
+        sign = next_up_down(maze, i, j)
+        # if next move is a space, we reached the end
+        if maze[j + sign][i] == " ":
+            break
+        j0 = j
+        j = up_or_down(maze, i, j, sign, letters)
+        steps += abs(j - j0)
+    return steps - 1
+
+print("Part 2: {}".format(walk_maze2(maze)))
